@@ -53,7 +53,10 @@ public class IssueTrackerApplication {
             System.out.println("✅ Issue Tracker CLI running...");
 
             if (args.length == 0) {
-                System.out.println("Usage: create <description> | update <id> <status> | list <status>");
+                System.out.println("Usage:");
+                System.out.println("  create --description <text> [--parentId <id>]");
+                System.out.println("  update --id <issueId> --status <OPEN|IN_PROGRESS|CLOSED>");
+                System.out.println("  list --status <OPEN|IN_PROGRESS|CLOSED>");
                 return;
             }
 
@@ -61,19 +64,7 @@ public class IssueTrackerApplication {
 
             switch (command) {
                 case "create" -> {
-                    // Preparsuj argumenty do mapy
-                    Map<String, String> params = new HashMap<>();
-                    for (int i = 1; i < args.length; i++) {
-                        if (args[i].startsWith("--")) {
-                            String key = args[i].substring(2); // odstránime "--"
-                            if (i + 1 < args.length && !args[i + 1].startsWith("--")) {
-                                params.put(key, args[i + 1]);
-                                i++; // posuň sa o jeden argument dopredu
-                            } else {
-                                params.put(key, null); // flag bez hodnoty
-                            }
-                        }
-                    }
+                    Map<String, String> params = parseArgs(args);
 
                     String description = params.get("description");
                     String parentId = params.get("parentId");
@@ -87,39 +78,66 @@ public class IssueTrackerApplication {
                     System.out.println("📌 Issue created in Google Sheets!");
                 }
                 case "update" -> {
-                    Map<String, String> params = new HashMap<>();
-                    for (int i = 1; i < args.length; i++) {
-                        if (args[i].startsWith("--")) {
-                            String key = args[i].substring(2);
-                            if (i + 1 < args.length && !args[i + 1].startsWith("--")) {
-                                params.put(key, args[i + 1]);
-                                i++;
-                            } else {
-                                params.put(key, null);
-                            }
-                        }
-                    }
+                    Map<String, String> params = parseArgs(args);
 
                     String issueId = params.get("id");
                     String status = params.get("status");
 
-                    if (issueId == null || issueId.isBlank()) {
-                        System.out.println("❌ Missing required --id parameter");
+                    if (issueId == null || status == null) {
+                        System.out.println("❌ Missing required parameters: --id and --status");
                         return;
                     }
+
+                    try {
+                        issueService.updateStatus(issueId, status);
+                        System.out.println("🔄 Issue " + issueId + " updated to status: " + status);
+                    } catch (RuntimeException ex) {
+                        System.out.println("❌ " + ex.getMessage()); // zachytí „Issue with ID ... not found“
+                    }
+                }
+                case "list" -> {
+                    Map<String, String> params = parseArgs(args);
+
+                    String status = params.get("status");
                     if (status == null || status.isBlank()) {
                         System.out.println("❌ Missing required --status parameter");
                         return;
                     }
 
-                    issueService.updateStatus(issueId, status.toUpperCase());
-                    System.out.println("🔄 Issue " + issueId + " updated to " + status);
-                }
-                case "list" -> {
-                    System.out.println("📋 List not implemented yet.");
+                    var issues = issueService.listByStatus(status);
+                    if (issues.isEmpty()) {
+                        System.out.println("ℹ️ No issues found with status: " + status);
+                    } else {
+                        issues.forEach(issue -> System.out.printf(
+                                "ID=%s | Description=%s | ParentID=%s | Status=%s | CreatedAt=%s | UpdatedAt=%s%n",
+                                issue.getId(),
+                                issue.getDescription(),
+                                issue.getParentId(),
+                                issue.getStatus(),
+                                issue.getCreatedAt(),
+                                issue.getUpdatedAt()
+                        ));
+                    }
                 }
                 default -> System.out.println("❌ Unknown command: " + command);
             }
         };
+    }
+
+    // 🛠️ Pomocná metóda na parsovanie argumentov (--key value)
+    private Map<String, String> parseArgs(String[] args) {
+        Map<String, String> params = new HashMap<>();
+        for (int i = 1; i < args.length; i++) {
+            if (args[i].startsWith("--")) {
+                String key = args[i].substring(2);
+                if (i + 1 < args.length && !args[i + 1].startsWith("--")) {
+                    params.put(key, args[i + 1]);
+                    i++;
+                } else {
+                    params.put(key, null);
+                }
+            }
+        }
+        return params;
     }
 }

@@ -36,7 +36,8 @@ public class IssueService {
     }
 
     private String generateId() {
-        // TODO: implement proper ID generator (e.g. AD-1, AD-2, etc.)
-        return "TEMP-ID";
+        String datePart = java.time.LocalDate.now().toString().replace("-", "");
+        int random = (int) (Math.random() * 10000); // malé číslo na odlíšenie
+        return "AD-" + datePart + "-" + random;
     }
 }
