@@ -34,3 +34,6 @@ build/
 
 # Google API credentials
 src/main/resources/credentials.json
+
+#env
+.env
