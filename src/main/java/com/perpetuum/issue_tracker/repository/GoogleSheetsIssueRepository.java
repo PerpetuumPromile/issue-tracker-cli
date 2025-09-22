@@ -34,8 +34,31 @@ public class GoogleSheetsIssueRepository implements IssueRepository {
 
     @Override
     public void updateStatus(String issueId, String status) {
-        // TODO: implement full update (search by ID and update row)
-        throw new UnsupportedOperationException("Update not implemented yet");
+        try {
+            List<List<Object>> values = sheetsFacade.readAll();
+            if (values == null || values.isEmpty()) {
+                throw new RuntimeException("❌ No issues found in sheet");
+            }
+
+            for (int i = 1; i < values.size(); i++) { // preskoč hlavičku
+                List<Object> row = values.get(i);
+                if (row.get(0).toString().equals(issueId)) {
+                    // Update status (col 4) and updatedAt (col 6)
+                    row.set(3, status); 
+                    if (row.size() < 6) {
+                        while (row.size() < 6) row.add(""); // doplníme prázdne hodnoty
+                    }
+                    row.set(5, java.time.LocalDateTime.now().toString());
+
+                    // Zapíš späť celý riadok
+                    sheetsFacade.updateRow(i + 1, row); // i+1 -> lebo indexovanie v Google Sheets je od 1
+                    return;
+                }
+            }
+            throw new RuntimeException("❌ Issue with ID " + issueId + " not found");
+        } catch (IOException e) {
+            throw new RuntimeException("❌ Failed to update issue in Google Sheets", e);
+        }
     }
 
     @Override

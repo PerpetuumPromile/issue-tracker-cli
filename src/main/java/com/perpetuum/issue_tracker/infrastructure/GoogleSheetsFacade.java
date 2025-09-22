@@ -100,4 +100,13 @@ public class GoogleSheetsFacade {
                 .execute();
         return response.getValues();
     }
+
+    public void updateRow(int rowIndex, List<Object> row) throws IOException {
+    String range = defaultSheetName + "!A" + rowIndex + ":F" + rowIndex;
+    ValueRange body = new ValueRange().setValues(Collections.singletonList(row));
+    service.spreadsheets().values()
+            .update(spreadsheetId, range, body)
+            .setValueInputOption("RAW")
+            .execute();
+}
 }

@@ -87,7 +87,33 @@ public class IssueTrackerApplication {
                     System.out.println("📌 Issue created in Google Sheets!");
                 }
                 case "update" -> {
-                    System.out.println("🔄 Update not implemented yet.");
+                    Map<String, String> params = new HashMap<>();
+                    for (int i = 1; i < args.length; i++) {
+                        if (args[i].startsWith("--")) {
+                            String key = args[i].substring(2);
+                            if (i + 1 < args.length && !args[i + 1].startsWith("--")) {
+                                params.put(key, args[i + 1]);
+                                i++;
+                            } else {
+                                params.put(key, null);
+                            }
+                        }
+                    }
+
+                    String issueId = params.get("id");
+                    String status = params.get("status");
+
+                    if (issueId == null || issueId.isBlank()) {
+                        System.out.println("❌ Missing required --id parameter");
+                        return;
+                    }
+                    if (status == null || status.isBlank()) {
+                        System.out.println("❌ Missing required --status parameter");
+                        return;
+                    }
+
+                    issueService.updateStatus(issueId, status.toUpperCase());
+                    System.out.println("🔄 Issue " + issueId + " updated to " + status);
                 }
                 case "list" -> {
                     System.out.println("📋 List not implemented yet.");
