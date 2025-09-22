@@ -16,6 +16,10 @@ public class IssueService {
     }
 
     public void createIssue(String description, String parentId) {
+        if (description == null || description.isBlank()) {
+            throw new IllegalArgumentException("Description is required");
+        }
+
         Issue issue = Issue.builder()
                 .id(generateId())
                 .description(description)
