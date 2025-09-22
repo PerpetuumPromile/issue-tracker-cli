@@ -52,7 +52,7 @@ Before you can run the app, make sure you have installed:
 
 ## 🐳 Running with Docker
 1. **Build the Docker image**
-    - docker build -t issue-tracker .
+    ```docker build -t issue-tracker``` .
 
 2. **Run the CLI**
 
