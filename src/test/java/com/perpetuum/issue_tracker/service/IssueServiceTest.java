@@ -16,6 +16,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.perpetuum.issue_tracker.model.Issue;
+import com.perpetuum.issue_tracker.model.Status;
 import com.perpetuum.issue_tracker.repository.IssueRepository;
 
 class IssueServiceTest {
@@ -35,7 +36,7 @@ class IssueServiceTest {
     }
 
     /**
-     * ✅ Positive test:
+     * Positive test:
      * Ensures that when we create an issue, it:
      * - Saves with description
      * - Automatically sets status to OPEN
@@ -50,28 +51,28 @@ class IssueServiceTest {
 
         Issue saved = captor.getValue();
         assertEquals("Test issue", saved.getDescription());
-        assertEquals("OPEN", saved.getStatus());
+        assertEquals(Status.OPEN, saved.getStatus());
         assertNotNull(saved.getId());
         assertNotNull(saved.getCreatedAt());
     }
 
     /**
-     * ✅ Positive test:
+     * Positive test:
      * Checks that updateStatus() returns true
      * when the repository confirms the update.
      */
     @Test
     void updateStatus_shouldReturnTrueIfRepositoryUpdates() {
-        when(repository.updateStatus("ISSUE-1", "CLOSED")).thenReturn(true);
+        when(repository.updateStatus("ISSUE-1", Status.CLOSED)).thenReturn(true);
 
         boolean result = service.updateStatus("ISSUE-1", "CLOSED");
 
         assertTrue(result);
-        verify(repository).updateStatus("ISSUE-1", "CLOSED");
+        verify(repository).updateStatus("ISSUE-1", Status.CLOSED);
     }
 
     /**
-     * ✅ Positive test:
+     * Positive test:
      * listByStatus() should return issues filtered by status.
      */
     @Test
@@ -79,11 +80,11 @@ class IssueServiceTest {
         Issue issue = Issue.builder()
                 .id("ISSUE-1")
                 .description("Desc")
-                .status("OPEN")
+                .status(Status.OPEN)
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        when(repository.findByStatus("OPEN")).thenReturn(List.of(issue));
+        when(repository.findByStatus(Status.OPEN)).thenReturn(List.of(issue));
 
         var result = service.listByStatus("OPEN");
 
@@ -92,7 +93,7 @@ class IssueServiceTest {
     }
 
     /**
-     * ❌ Negative test:
+     * Negative test:
      * If description is null, createIssue() should throw an exception.
      */
     @Test
@@ -103,18 +104,18 @@ class IssueServiceTest {
     }
 
     /**
-     * ❌ Negative test:
+     * Negative test:
      * If repository.updateStatus() fails (returns false),
      * the service should return false as well.
      */
     @Test
     void updateStatus_shouldReturnFalseIfRepositoryFails() {
-        when(repository.updateStatus("ISSUE-404", "CLOSED")).thenReturn(false);
+        when(repository.updateStatus("ISSUE-404", Status.CLOSED)).thenReturn(false);
 
         boolean result = service.updateStatus("ISSUE-404", "CLOSED");
 
         assertFalse(result);
-        verify(repository).updateStatus("ISSUE-404", "CLOSED");
+        verify(repository).updateStatus("ISSUE-404", Status.CLOSED);
     }
 
     /**
@@ -123,7 +124,7 @@ class IssueServiceTest {
      */
     @Test
     void listByStatus_shouldReturnEmptyListWhenNoIssues() {
-        when(repository.findByStatus("CLOSED")).thenReturn(List.of());
+        when(repository.findByStatus(Status.CLOSED)).thenReturn(List.of());
 
         var result = service.listByStatus("CLOSED");
 
@@ -131,7 +132,7 @@ class IssueServiceTest {
     }
 
     /**
-     * ❌ Negative test:
+     * Negative test:
      * If user passes invalid status (not OPEN/IN_PROGRESS/CLOSED),
      * service should throw IllegalArgumentException.
      */
@@ -143,5 +144,4 @@ class IssueServiceTest {
         );
         assertTrue(ex.getMessage().contains("Invalid status: INVALID"));
     }
-
 }

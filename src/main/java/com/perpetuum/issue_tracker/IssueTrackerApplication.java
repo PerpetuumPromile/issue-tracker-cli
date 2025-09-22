@@ -1,4 +1,9 @@
 package com.perpetuum.issue_tracker;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.GeneralSecurityException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -8,14 +13,28 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.json.JsonFactory;
+import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.services.sheets.v4.Sheets;
+import com.google.api.services.sheets.v4.SheetsScopes;
+import com.google.auth.http.HttpCredentialsAdapter;
+import com.google.auth.oauth2.GoogleCredentials;
 import com.perpetuum.issue_tracker.infrastructure.GoogleSheetsFacade;
 import com.perpetuum.issue_tracker.repository.GoogleSheetsIssueRepository;
 import com.perpetuum.issue_tracker.service.IssueService;
 
+/**
+ * Entry point for the Issue Tracker CLI application.
+ * 
+ * Responsibilities:
+ * - Configure Spring Boot context.
+ * - Define Beans for Google Sheets client, Facade, Repository, and Service.
+ * - Provide a CLI CommandLineRunner to handle user input.
+ */
 @SpringBootApplication
 public class IssueTrackerApplication {
 
-    // ✅ SpreadsheetId sa teraz načítava z application.properties
     @Value("${google.sheets.spreadsheet-id}")
     private String spreadsheetId;
 
@@ -23,34 +42,57 @@ public class IssueTrackerApplication {
         SpringApplication.run(IssueTrackerApplication.class, args);
     }
 
-    // ✅ Najprv definujeme facade ako bean
+    /**
+     *  Low-level dependency: Google Sheets API client.
+     * Instead of creating it inside the Facade, we configure it here
+     * so that higher-level components depend on abstractions.
+     */
     @Bean
-    public GoogleSheetsFacade googleSheetsFacade() throws Exception {
-        GoogleSheetsFacade facade = new GoogleSheetsFacade(spreadsheetId);
+    public Sheets googleSheetsClient() throws IOException, GeneralSecurityException {
+        JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
 
-        // 🟢 Inicializujeme hlavičku pri štarte
+        InputStream in = getClass().getClassLoader().getResourceAsStream("credentials.json");
+        if (in == null) {
+            throw new RuntimeException("Missing credentials.json in resources!");
+        }
+
+        GoogleCredentials credentials = GoogleCredentials.fromStream(in)
+                .createScoped(Collections.singleton(SheetsScopes.SPREADSHEETS));
+
+        return new Sheets.Builder(
+                GoogleNetHttpTransport.newTrustedTransport(),
+                jsonFactory,
+                new HttpCredentialsAdapter(credentials)
+        ).setApplicationName("Issue Tracker CLI").build();
+    }
+
+    /**
+     * GoogleSheetsFacade bean (injected with Sheets client).
+     */
+    @Bean
+    public GoogleSheetsFacade googleSheetsFacade(Sheets sheetsClient) throws Exception {
+        GoogleSheetsFacade facade = new GoogleSheetsFacade(sheetsClient, spreadsheetId);
         facade.initializeHeaderIfEmpty();
-
         return facade;
     }
 
-    // ✅ Repo bean
+    /** Repository bean. */
     @Bean
     public GoogleSheetsIssueRepository issueRepository(GoogleSheetsFacade facade) {
         return new GoogleSheetsIssueRepository(facade);
     }
 
-    // ✅ Service bean
+    /** Service bean. */
     @Bean
     public IssueService issueService(GoogleSheetsIssueRepository repository) {
         return new IssueService(repository);
     }
 
-    // ✅ CLI runner
+    /** CLI runner: handles input and delegates to service. */
     @Bean
     public CommandLineRunner commandLineRunner(IssueService issueService) {
         return args -> {
-            System.out.println("✅ Issue Tracker CLI running...");
+            System.out.println("Issue Tracker CLI running...");
 
             if (args.length == 0) {
                 System.out.println("Usage:");
@@ -61,53 +103,48 @@ public class IssueTrackerApplication {
             }
 
             String command = args[0].toLowerCase();
+            Map<String, String> params = parseArgs(args);
 
             switch (command) {
                 case "create" -> {
-                    Map<String, String> params = parseArgs(args);
-
                     String description = params.get("description");
                     String parentId = params.get("parentId");
 
                     if (description == null || description.isBlank()) {
-                        System.out.println("❌ Missing required --description parameter");
+                        System.out.println("Missing required --description parameter");
                         return;
                     }
 
                     issueService.createIssue(description, parentId);
-                    System.out.println("📌 Issue created in Google Sheets!");
+                    System.out.println("Issue created in Google Sheets!");
                 }
                 case "update" -> {
-                    Map<String, String> params = parseArgs(args);
-
                     String id = params.get("id");
                     String status = params.get("status");
 
                     if (id == null || id.isBlank() || status == null || status.isBlank()) {
-                        System.out.println("❌ Missing required --id and --status parameters");
+                        System.out.println("Missing required --id and --status parameters");
                         return;
                     }
 
                     boolean updated = issueService.updateStatus(id, status);
 
                     if (updated) {
-                        System.out.println("🔄 Issue " + id + " updated to status " + status);
+                        System.out.println("Issue " + id + " updated to status " + status);
                     } else {
-                        System.out.println("❌ Issue with ID " + id + " not found");
+                        System.out.println("Issue with ID " + id + " not found");
                     }
                 }
                 case "list" -> {
-                    Map<String, String> params = parseArgs(args);
-
                     String status = params.get("status");
                     if (status == null || status.isBlank()) {
-                        System.out.println("❌ Missing required --status parameter");
+                        System.out.println("Missing required --status parameter");
                         return;
                     }
 
                     var issues = issueService.listByStatus(status);
                     if (issues.isEmpty()) {
-                        System.out.println("ℹ️ No issues found with status: " + status);
+                        System.out.println("No issues found with status: " + status);
                     } else {
                         issues.forEach(issue -> System.out.printf(
                                 "ID=%s | Description=%s | ParentID=%s | Status=%s | CreatedAt=%s | UpdatedAt=%s%n",
@@ -120,12 +157,12 @@ public class IssueTrackerApplication {
                         ));
                     }
                 }
-                default -> System.out.println("❌ Unknown command: " + command);
+                default -> System.out.println("Unknown command: " + command);
             }
         };
     }
 
-    // 🛠️ Pomocná metóda na parsovanie argumentov (--key value)
+    /** Helper method to parse CLI arguments (--key value). */
     private Map<String, String> parseArgs(String[] args) {
         Map<String, String> params = new HashMap<>();
         for (int i = 1; i < args.length; i++) {
