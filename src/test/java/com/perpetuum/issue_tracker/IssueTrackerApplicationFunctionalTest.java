@@ -17,7 +17,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 /**
  * Functional tests for the CLI.
  *
- * ⚠️ Note:
+ * Note:
  * These tests run the Spring Boot application context,
  * but instead of connecting to real Google Sheets,
  * we use a mock GoogleSheetsFacade (via @MockBean).
@@ -49,7 +49,7 @@ class IssueTrackerApplicationFunctionalTest {
     }
 
     /**
-     * ✅ Test that the CLI can start with a valid "create" command.
+     * Test that the CLI can start with a valid "create" command.
      * It runs the CLI runner directly and verifies success output.
      */
     @Test
@@ -59,7 +59,7 @@ class IssueTrackerApplicationFunctionalTest {
     }
 
     /**
-     * ✅ Test that the CLI prints an error message when the required
+     * Test that the CLI prints an error message when the required
      * "--description" parameter is missing.
      */
     @Test
@@ -69,7 +69,7 @@ class IssueTrackerApplicationFunctionalTest {
     }
 
     /**
-     * ✅ Test that the CLI prints an error message when trying to update
+     * Test that the CLI prints an error message when trying to update
      * a non-existent issue ID.
      */
     @Test
@@ -79,7 +79,7 @@ class IssueTrackerApplicationFunctionalTest {
     }
 
     /**
-     * ✅ Test that the CLI handles an empty "list" result gracefully.
+     * Test that the CLI handles an empty "list" result gracefully.
      */
     @Test
     void cliListShouldHandleEmptyResult() throws Exception {
