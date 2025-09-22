@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.perpetuum.issue_tracker.model.Issue;
+import com.perpetuum.issue_tracker.model.Status;
 import com.perpetuum.issue_tracker.repository.IssueRepository;
 
 public class IssueService {
@@ -27,12 +28,14 @@ public class IssueService {
         repository.create(issue);
     }
 
-    public void updateStatus(String issueId, String status) {
-        repository.updateStatus(issueId, status);
+    public boolean updateStatus(String issueId, String status) {
+        Status s = Status.fromString(status); // validácia
+        return repository.updateStatus(issueId, s.name());
     }
 
     public List<Issue> listByStatus(String status) {
-        return repository.findByStatus(status);
+        Status s = Status.fromString(status);
+        return repository.findByStatus(s.name());
     }
 
     private String generateId() {

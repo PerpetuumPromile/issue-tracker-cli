@@ -80,19 +80,20 @@ public class IssueTrackerApplication {
                 case "update" -> {
                     Map<String, String> params = parseArgs(args);
 
-                    String issueId = params.get("id");
+                    String id = params.get("id");
                     String status = params.get("status");
 
-                    if (issueId == null || status == null) {
-                        System.out.println("❌ Missing required parameters: --id and --status");
+                    if (id == null || id.isBlank() || status == null || status.isBlank()) {
+                        System.out.println("❌ Missing required --id and --status parameters");
                         return;
                     }
 
-                    try {
-                        issueService.updateStatus(issueId, status);
-                        System.out.println("🔄 Issue " + issueId + " updated to status: " + status);
-                    } catch (RuntimeException ex) {
-                        System.out.println("❌ " + ex.getMessage()); // zachytí „Issue with ID ... not found“
+                    boolean updated = issueService.updateStatus(id, status);
+
+                    if (updated) {
+                        System.out.println("🔄 Issue " + id + " updated to status " + status);
+                    } else {
+                        System.out.println("❌ Issue with ID " + id + " not found");
                     }
                 }
                 case "list" -> {
